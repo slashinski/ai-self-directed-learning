@@ -11,7 +11,8 @@ Usage:
                            [--title text] [--out file]
 
 The report goes next to the tests file as initial-test-results.md unless --out
-is given. A test case passes only when every expected criterion is met and no
+is given. A relative --out is resolved from the modules/ directory (for example
+--out module-1/exercise-1/results.md); an absolute --out is used as written. A test case passes only when every expected criterion is met and no
 failure criterion is triggered; a partial counts as not met.
 """
 
@@ -23,6 +24,8 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parent.parent
+MODULES = ROOT / "modules"
 APPROVED_MODELS = ("sonnet", "haiku")
 MARKS = {"pass": "✅ Met", "partial": "⚠️ Partial", "fail": "❌ Not met"}
 
@@ -138,13 +141,18 @@ def render(title, prd_name, tests_name, tests, graded):
     return "\n".join(lines[:-1]).rstrip() + "\n"
 
 
+def under_modules(value):
+    """Resolve a command-line path from the modules/ directory (an absolute path stays as written)."""
+    return MODULES / value
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("prd", type=Path)
-    parser.add_argument("tests", type=Path)
+    parser.add_argument("prd", type=under_modules, help="PRD path, relative to modules/")
+    parser.add_argument("tests", type=under_modules, help="tests path, relative to modules/")
     parser.add_argument("--model", default="sonnet", choices=APPROVED_MODELS)
     parser.add_argument("--title", default="Initial Test Results")
-    parser.add_argument("--out", type=Path, help="report path (default: initial-test-results.md next to the tests file)")
+    parser.add_argument("--out", type=under_modules, help="report path, relative to modules/ (default: initial-test-results.md next to the tests file)")
     args = parser.parse_args()
 
     for path in (args.prd, args.tests):
@@ -158,6 +166,7 @@ def main():
 
     report = render(args.title, args.prd.name, args.tests.name, tests, graded)
     out = args.out or args.tests.parent / "initial-test-results.md"
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(report)
     print(report.split("## Test Case")[0].split("## Summary")[1].strip())
     print(f"\nReport: {out}")
