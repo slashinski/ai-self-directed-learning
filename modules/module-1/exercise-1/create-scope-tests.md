@@ -92,3 +92,5 @@
 - PRD contains non-functional requirements without measurable success criteria.
 - PRD introduces unsupported functionality beyond the stated scope.
 - PRD lacks sufficient information for developers to estimate and plan implementation.
+
+---
